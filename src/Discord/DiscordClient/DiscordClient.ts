@@ -6,7 +6,7 @@ import { LogLevel } from '../../Logger/LogLevel'
 
 export class DiscordClient {
   private static _instance: DiscordClient
-  private readonly logger = Logger.getInstance('DiscordClient')
+  private readonly logger = Logger.getInstance(DiscordClient.name)
   private client: DiscordJSClient
 
   public static getInstance (): DiscordClient {

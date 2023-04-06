@@ -3,6 +3,7 @@ import { type LogData } from './LogData'
 import { LogFileWriter } from './LogFileWriter'
 import { LoggerConsts } from './LoggerConsts'
 import moment from 'moment'
+import { LogLevel } from './LogLevel'
 
 export class Logger {
   private static readonly _instances = new Map<string, Logger>()
@@ -24,6 +25,14 @@ export class Logger {
   public log (logData: LogData): void {
     console.log(this.logDataToConsoleStr(logData))
     void this.logFileWriter.write(this.logDataToJson(logData))
+  }
+
+  public logDebug (message: string): void {
+    this.log({
+      level: LogLevel.DEBUG,
+      message,
+      tag: []
+    })
   }
 
   private logDataToJson (logData: LogData): string {

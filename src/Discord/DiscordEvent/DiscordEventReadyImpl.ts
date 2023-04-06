@@ -7,7 +7,7 @@ import { type Client as DiscordJSClient } from 'discord.js'
 export class DiscordEventReadyImpl implements DiscordEvent<'ready'> {
   public readonly name = 'ready'
   private client: DiscordJSClient<true>
-  private readonly logger = Logger.getInstance('DiscordEventReadyImpl')
+  private readonly logger = Logger.getInstance(DiscordEventReadyImpl.name)
 
   public listener (client: DiscordJSClient<true>): void {
     this.client = client

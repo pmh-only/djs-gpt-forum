@@ -12,7 +12,10 @@ export class DiscordConsts {
       'DISCORD_FORUM_ID', process.env.DISCORD_FORUM_ID)
 
   public static readonly DISCORD_INTENTS: GatewayIntentBits[] = [
-    GatewayIntentBits.GuildMessages
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent
   ]
 
   public static readonly DISCORD_ACTIVITY: ActivityOptions = {
