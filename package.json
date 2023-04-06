@@ -8,7 +8,8 @@
     "start": "tsc && node .",
     "build": "tsc",
     "lint": "eslint .",
-    "start:watch": "nodemon -e ts --exec 'tsc && node . || exit 1'"
+    "start:watch": "nodemon -e ts --exec 'tsc && node . || exit 1'",
+    "start:prod": "node ."
   },
   "author": "Minhyeok Park <opensource@pmh.codes>",
   "license": "MIT",
