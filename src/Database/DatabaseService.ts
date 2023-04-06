@@ -14,15 +14,22 @@ export class DatabaseService {
       .limit(1).then((v) => v.length > 0)
   }
 
-  public async saveNewMessage (message: Message): Promise<void> {
+  public async saveNewMessage (message: Message, authorType = MessageAuthorType.USER): Promise<void> {
     await this.db
       .query<Messages>('messages')
       .insert({
         threadId: parseInt(message.channel.id),
         messageId: parseInt(message.id),
-        authorType: MessageAuthorType.USER,
+        authorType,
         message: message.content
       })
+  }
+
+  public async loadThreadMessages (message: Message): Promise<Messages[]> {
+    return await this.db
+      .query<Messages>('messages')
+      .where('threadId', parseInt(message.channel.id))
+      .orderBy('messageId', 'asc')
   }
 
   public async isAskerSaved (message: Message): Promise<boolean> {

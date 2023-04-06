@@ -15,3 +15,5 @@ CREATE TABLE djsgpt.askers (
   userId bigint not null,
   isStarter boolean not null
 );
+
+alter table djsgpt.messages convert to charset utf8;
