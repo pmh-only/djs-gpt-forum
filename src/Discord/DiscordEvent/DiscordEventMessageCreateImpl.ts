@@ -31,6 +31,7 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
   private isVaildMessage (message: Message): boolean {
     return !message.author.bot &&
       message.guild !== null &&
+      !message.content.startsWith('#') &&
       message.channel.type === ChannelType.PublicThread &&
       message.channel.parent?.type === ChannelType.GuildForum &&
       message.channel.parent.id === DiscordConsts.DISCORD_FORUM_ID
