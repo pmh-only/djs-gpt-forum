@@ -17,8 +17,10 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
     if (!await this.dbService.isThreadSaved(message))
       await this.dbService.saveNewAsker(message, true)
 
-    else if (!await this.dbService.isAskerSaved(message))
+    else if (!await this.dbService.isAskerSaved(message)) {
+      await this.processUnPermittedMessage(message)
       return
+    }
 
     await this.dbService.saveNewMessage(message)
     await this.dbService.saveNewMessage(
@@ -42,5 +44,9 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
     const aiResult = await this.aiService.askAI(promptMessages)
 
     return await newMessage.edit(aiResult ?? 'ERROR')
+  }
+
+  private async processUnPermittedMessage (message: Message): Promise<void> {
+    await message.delete()
   }
 }
