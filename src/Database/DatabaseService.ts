@@ -64,16 +64,15 @@ export class DatabaseService {
       .limit(1).then((v) => v.length > 0)
   }
 
-  public async saveNewAsker (message: Message, isStarter: boolean): Promise<void> {
+  public async saveAskStarter (message: Message): Promise<void> {
     this.logger.log({
       level: LogLevel.INFO,
-      message: 'Asker saved',
-      tag: ['db', 'save', 'asker'],
+      message: 'AskStarter saved',
+      tag: ['db', 'save', 'asker', 'starter'],
       extra: {
         author: message.author.id,
         message: message.content,
-        thread: message.channel.id,
-        isStarter
+        thread: message.channel.id
       }
     })
 
@@ -82,7 +81,46 @@ export class DatabaseService {
       .insert({
         threadId: parseInt(message.channel.id),
         userId: parseInt(message.author.id),
-        isStarter
+        isStarter: true
       })
+  }
+
+  public async saveAsker (message: Message): Promise<void> {
+    this.logger.log({
+      level: LogLevel.INFO,
+      message: 'Asker saved',
+      tag: ['db', 'save', 'asker'],
+      extra: {
+        author: message.author.id,
+        message: message.content,
+        thread: message.channel.id,
+        target: message.mentions.users.at(0)
+      }
+    })
+
+    await this.db
+      .query<Askers>('askers')
+      .insert({
+        threadId: parseInt(message.channel.id),
+        userId: parseInt(message.mentions.users.at(0)?.id ?? '0'),
+        isStarter: false
+      })
+  }
+
+  public async loadAskStarter (message: Message): Promise<Askers> {
+    this.logger.log({
+      level: LogLevel.INFO,
+      message: 'AskStarter loaded',
+      tag: ['db', 'load', 'asker', 'starter'],
+      extra: {
+        thread: message.channel.id
+      }
+    })
+
+    return await this.db
+      .query<Askers>('askers')
+      .where('threadId', message.channel.id)
+      .andWhere('isStarter', true)
+      .limit(0).then((v) => v[0])
   }
 }

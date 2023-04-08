@@ -15,9 +15,14 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
       return
 
     if (!await this.dbService.isThreadSaved(message))
-      await this.dbService.saveNewAsker(message, true)
+      await this.dbService.saveAskStarter(message)
 
-    else if (!await this.dbService.isAskerSaved(message)) {
+    if (message.content.startsWith('#')) {
+      await this.processHashCommandMessage(message)
+      return
+    }
+
+    if (!await this.dbService.isAskerSaved(message)) {
       await this.processUnPermittedMessage(message)
       return
     }
@@ -33,7 +38,7 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
   private isVaildMessage (message: Message): boolean {
     return !message.author.bot &&
       message.guild !== null &&
-      !message.content.startsWith('#') &&
+      // !message.content.startsWith('#') &&
       message.channel.type === ChannelType.PublicThread &&
       message.channel.parent?.type === ChannelType.GuildForum &&
       message.channel.parent.id === DiscordConsts.DISCORD_FORUM_ID
@@ -48,5 +53,15 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
 
   private async processUnPermittedMessage (message: Message): Promise<void> {
     await message.delete()
+  }
+
+  private async processHashCommandMessage (message: Message): Promise<void> {
+    if (message.content.startsWith('#invite'))
+      await this.inviteAsker(message)
+  }
+
+  private async inviteAsker (message: Message): Promise<void> {
+    await this.dbService.saveAsker(message)
+    await message.reply('> Done')
   }
 }
