@@ -28,11 +28,13 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
     }
 
     await this.dbService.saveNewMessage(message)
-    await this.dbService.saveNewMessage(
-      await this.askAIAndSend(message,
-        await this.dbService.loadThreadMessages(message)),
-      MessageAuthorType.ASSISTANT
-    )
+
+    const botMessage = await message.channel.send('Processing...')
+    const threadMessages = await this.dbService.loadThreadMessages(message)
+    const askAIResult = await this.askAI(threadMessages)
+    const sentMessages = await this.sendBulkMessage(botMessage, askAIResult)
+
+    await this.dbService.saveNewMessages(sentMessages, MessageAuthorType.ASSISTANT)
   }
 
   private isVaildMessage (message: Message): boolean {
@@ -44,11 +46,23 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
       message.channel.parent.id === DiscordConsts.DISCORD_FORUM_ID
   }
 
-  private async askAIAndSend (message: Message, promptMessages: Messages[]): Promise<Message> {
-    const newMessage = await message.channel.send('Processing...')
-    const aiResult = await this.aiService.askAI(promptMessages)
+  private async askAI (promptMessages: Messages[]): Promise<string> {
+    return await this.aiService.askAI(promptMessages) ?? 'ERROR'
+  }
 
-    return await newMessage.edit(aiResult ?? 'ERROR')
+  private async sendBulkMessage (message: Message, bulkContent: string): Promise<Message[]> {
+    const slicedContents = bulkContent.match(/(.|[\r\n]){1,2000}/g) ?? []
+    const sentMessages: Message[] = []
+
+    for (const [index, content] of slicedContents.entries()) {
+      const sentMessage = index < 1
+        ? await message.edit(content)
+        : await message.channel.send(content)
+
+      sentMessages.push(sentMessage)
+    }
+
+    return sentMessages
   }
 
   private async processUnPermittedMessage (message: Message): Promise<void> {

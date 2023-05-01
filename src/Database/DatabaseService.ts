@@ -17,6 +17,11 @@ export class DatabaseService {
       .limit(1).then((v) => v.length > 0)
   }
 
+  public async saveNewMessages (messages: Message[], authorType = MessageAuthorType.USER): Promise<void> {
+    for (const message of messages)
+      await this.saveNewMessage(message, authorType)
+  }
+
   public async saveNewMessage (message: Message, authorType = MessageAuthorType.USER): Promise<void> {
     this.logger.log({
       level: LogLevel.INFO,
