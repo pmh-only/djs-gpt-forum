@@ -4,15 +4,15 @@ CREATE SCHEMA djsgpt;
 GRANT ALL on djsgpt.* to djsgpt@localhost;
 
 CREATE TABLE djsgpt.messages (
-  threadId bigint not null,
-  messageId bigint not null,
+  threadId varchar(20) not null,
+  messageId varchar(20) not null,
   authorType varchar(10) not null,
   message longtext not null
 );
 
 CREATE TABLE djsgpt.askers (
-  threadId bigint not null,
-  userId bigint not null,
+  threadId varchar(20) not null,
+  userId varchar(20) not null,
   isStarter boolean not null
 );
 

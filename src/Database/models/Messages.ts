@@ -1,6 +1,6 @@
 export interface Messages {
-  threadId: number
-  messageId: number
+  threadId: string
+  messageId: string
   authorType: MessageAuthorType
   message: string
 }

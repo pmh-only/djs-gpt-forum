@@ -97,11 +97,11 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
   private async listAsker (message: Message): Promise<void> {
     const askers = await this.dbService.loadAsker(message)
     const askerMembers = await Promise.all(askers.map(async (asker) =>
-      await message.guild?.members.fetch(asker.userId.toString())))
+      await message.guild?.members.fetch(asker.userId)))
 
-    const askerNames = askerMembers
+    const askerNames = '> ' + askerMembers
       .map((v) => v?.user.tag ?? 'Unknown')
-      .reduce((name, prev) => `${prev}\n> ${name}`, '')
+      .join('\n> ')
 
     await message.reply(askerNames.length < 1 ? '> Empty' : askerNames)
   }

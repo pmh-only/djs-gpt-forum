@@ -13,7 +13,7 @@ export class DatabaseService {
   public async isThreadSaved (message: Message): Promise<boolean> {
     return await this.db
       .query<Messages>('messages')
-      .where('threadId', parseInt(message.channel.id))
+      .where('threadId', message.channel.id)
       .limit(1).then((v) => v.length > 0)
   }
 
@@ -38,8 +38,8 @@ export class DatabaseService {
     await this.db
       .query<Messages>('messages')
       .insert({
-        threadId: parseInt(message.channel.id),
-        messageId: parseInt(message.id),
+        threadId: message.channel.id,
+        messageId: message.id,
         authorType,
         message: message.content
       })
@@ -57,15 +57,15 @@ export class DatabaseService {
 
     return await this.db
       .query<Messages>('messages')
-      .where('threadId', parseInt(message.channel.id))
+      .where('threadId', message.channel.id)
       .orderBy('messageId', 'asc')
   }
 
   public async isAskerSaved (message: Message): Promise<boolean> {
     return await this.db
       .query<Askers>('askers')
-      .where('threadId', parseInt(message.channel.id))
-      .where('userId', parseInt(message.author.id))
+      .where('threadId', message.channel.id)
+      .where('userId', message.author.id)
       .limit(1).then((v) => v.length > 0)
   }
 
@@ -84,8 +84,8 @@ export class DatabaseService {
     await this.db
       .query<Askers>('askers')
       .insert({
-        threadId: parseInt(message.channel.id),
-        userId: parseInt(message.author.id),
+        threadId: message.channel.id,
+        userId: message.author.id,
         isStarter: true
       })
   }
@@ -106,8 +106,8 @@ export class DatabaseService {
     await this.db
       .query<Askers>('askers')
       .insert({
-        threadId: parseInt(message.channel.id),
-        userId: parseInt(message.mentions.users.at(0)?.id ?? '0'),
+        threadId: message.channel.id,
+        userId: message.mentions.users.at(0)?.id ?? '0',
         isStarter: false
       })
   }

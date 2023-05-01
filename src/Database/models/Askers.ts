@@ -1,5 +1,5 @@
 export interface Askers {
-  threadId: number
-  userId: number
+  threadId: string
+  userId: string
   isStarter: boolean
 }
