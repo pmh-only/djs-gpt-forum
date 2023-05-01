@@ -128,4 +128,19 @@ export class DatabaseService {
       .andWhere('isStarter', true)
       .limit(0).then((v) => v[0])
   }
+
+  public async loadAsker (message: Message): Promise<Askers[]> {
+    this.logger.log({
+      level: LogLevel.INFO,
+      message: 'Asker loaded',
+      tag: ['db', 'load', 'asker'],
+      extra: {
+        thread: message.channel.id
+      }
+    })
+
+    return await this.db
+      .query<Askers>('askers')
+      .where('threadId', message.channel.id)
+  }
 }

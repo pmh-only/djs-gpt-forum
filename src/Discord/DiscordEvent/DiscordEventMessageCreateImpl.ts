@@ -17,13 +17,13 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
     if (!await this.dbService.isThreadSaved(message))
       await this.dbService.saveAskStarter(message)
 
-    if (message.content.startsWith('#')) {
-      await this.processHashCommandMessage(message)
+    if (!await this.dbService.isAskerSaved(message)) {
+      await this.processUnPermittedMessage(message)
       return
     }
 
-    if (!await this.dbService.isAskerSaved(message)) {
-      await this.processUnPermittedMessage(message)
+    if (message.content.startsWith('#')) {
+      await this.processHashCommandMessage(message)
       return
     }
 
@@ -77,16 +77,32 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
   }
 
   private async processUnPermittedMessage (message: Message): Promise<void> {
-    await message.delete()
+    if (!message.content.startsWith('#') || message.content.startsWith('#asker'))
+      await message.delete()
   }
 
   private async processHashCommandMessage (message: Message): Promise<void> {
-    if (message.content.startsWith('#invite'))
-      await this.inviteAsker(message)
+    if (message.content.startsWith('#asker add'))
+      await this.addAsker(message)
+
+    if (message.content.startsWith('#asker list'))
+      await this.listAsker(message)
   }
 
-  private async inviteAsker (message: Message): Promise<void> {
+  private async addAsker (message: Message): Promise<void> {
     await this.dbService.saveAsker(message)
     await message.reply('> Done')
+  }
+
+  private async listAsker (message: Message): Promise<void> {
+    const askers = await this.dbService.loadAsker(message)
+    const askerMembers = await Promise.all(askers.map(async (asker) =>
+      await message.guild?.members.fetch(asker.userId.toString())))
+
+    const askerNames = askerMembers
+      .map((v) => v?.user.tag ?? 'Unknown')
+      .reduce((name, prev) => `${prev}\n> ${name}`, '')
+
+    await message.reply(askerNames.length < 1 ? '> Empty' : askerNames)
   }
 }
