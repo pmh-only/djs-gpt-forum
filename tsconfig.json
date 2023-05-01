@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "lib": ["ES2021"],
     "target": "es2016",
     "module": "commonjs",
     "rootDir": "./src",

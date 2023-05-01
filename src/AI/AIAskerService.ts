@@ -21,4 +21,24 @@ export class AIAskerService {
         role: v.authorType
       })))
   }
+
+  public async calculateTitle (promptMessages: Messages[]): Promise<string | undefined> {
+    this.logger.log({
+      level: LogLevel.INFO,
+      message: 'calculate title via ai',
+      tag: ['calcTitle'],
+      extra: { promptMessages }
+    })
+
+    return await this.aiAsker.ask([
+      ...promptMessages.map((v) => ({
+        content: v.message,
+        role: v.authorType
+      })),
+      {
+        content: '위 대화내용에 알맞은 제목을 한국어로 붙혀줘',
+        role: 'user'
+      }
+    ])
+  }
 }

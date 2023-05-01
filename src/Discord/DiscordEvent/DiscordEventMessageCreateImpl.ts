@@ -3,7 +3,7 @@ import { DatabaseService } from '../../Database/DatabaseService'
 import { MessageAuthorType, type Messages } from '../../Database/models/Messages'
 import { DiscordConsts } from '../DiscordConsts'
 import { type DiscordEvent } from './DiscordEvent'
-import { type Message, ChannelType } from 'discord.js'
+import { type Message, ChannelType, type ThreadChannel } from 'discord.js'
 
 export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreate'> {
   public readonly name = 'messageCreate'
@@ -35,6 +35,7 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
     const sentMessages = await this.sendBulkMessage(botMessage, askAIResult)
 
     await this.dbService.saveNewMessages(sentMessages, MessageAuthorType.ASSISTANT)
+    await this.calculateTitle(message, threadMessages)
   }
 
   private isVaildMessage (message: Message): boolean {
@@ -44,6 +45,16 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
       message.channel.type === ChannelType.PublicThread &&
       message.channel.parent?.type === ChannelType.GuildForum &&
       message.channel.parent.id === DiscordConsts.DISCORD_FORUM_ID
+  }
+
+  private async calculateTitle (message: Message, promptMessages: Messages[]): Promise<void> {
+    const channel = message.channel as ThreadChannel
+    const title = await this.aiService.calculateTitle(promptMessages)
+
+    if (title === undefined)
+      return
+
+    await channel.setName(title.replaceAll('"', ''))
   }
 
   private async askAI (promptMessages: Messages[]): Promise<string> {
