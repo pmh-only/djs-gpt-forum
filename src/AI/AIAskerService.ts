@@ -11,7 +11,7 @@ export class AIAskerService {
 
   public async askAndParseMessages (promptMessages: Messages[], tags: GuildForumTag[]): Promise<AIResponse | undefined> {
     promptMessages[promptMessages.length - 1].message =
-      promptMessages[promptMessages.length - 1].message +
+      `user says "${promptMessages[promptMessages.length - 1].message}"` +
       ' reply this conversation with line breaks in JSON "reply" field,' +
       ' create korean title of this conversation in JSON "title" field' +
       ` and choose hashtags from ${tags.reduce((prev, curr) => `${prev},"${curr.name}"`, '')} in JSON "tags" JSON array.`
