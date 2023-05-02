@@ -1,9 +1,10 @@
 import { AIAskerService } from '../../AI/AIAskerService'
+import type AIResponse from '../../AI/datatypes/AIResponse'
 import { DatabaseService } from '../../Database/DatabaseService'
-import { MessageAuthorType, type Messages } from '../../Database/models/Messages'
+import { MessageAuthorType } from '../../Database/models/Messages'
 import { DiscordConsts } from '../DiscordConsts'
 import { type DiscordEvent } from './DiscordEvent'
-import { type Message, ChannelType, type ThreadChannel } from 'discord.js'
+import { type Message, ChannelType, type PublicThreadChannel, type GuildForumTag } from 'discord.js'
 
 export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreate'> {
   public readonly name = 'messageCreate'
@@ -30,12 +31,20 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
     await this.dbService.saveNewMessage(message)
 
     const botMessage = await message.channel.send('Processing...')
+    const threadTags = await this.getTags(message)
     const threadMessages = await this.dbService.loadThreadMessages(message)
-    const askAIResult = await this.askAI(threadMessages)
-    const sentMessages = await this.sendBulkMessage(botMessage, askAIResult)
+    const aiResult = await this.aiService.askAndParseMessages(threadMessages, threadTags)
+
+    if (aiResult === undefined) {
+      await botMessage.edit('ERROR')
+      return
+    }
+
+    await this.setThreadTags(message, aiResult, threadTags)
+    await this.setThreadTitle(message, aiResult)
+    const sentMessages = await this.sendBulkMessage(botMessage, aiResult)
 
     await this.dbService.saveNewMessages(sentMessages, MessageAuthorType.ASSISTANT)
-    await this.calculateTitle(message, threadMessages)
   }
 
   private isVaildMessage (message: Message): boolean {
@@ -47,22 +56,8 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
       message.channel.parent.id === DiscordConsts.DISCORD_FORUM_ID
   }
 
-  private async calculateTitle (message: Message, promptMessages: Messages[]): Promise<void> {
-    const channel = message.channel as ThreadChannel
-    const title = await this.aiService.calculateTitle(promptMessages)
-
-    if (title === undefined)
-      return
-
-    await channel.setName(title.replaceAll('"', ''))
-  }
-
-  private async askAI (promptMessages: Messages[]): Promise<string> {
-    return await this.aiService.askAI(promptMessages) ?? 'ERROR'
-  }
-
-  private async sendBulkMessage (message: Message, bulkContent: string): Promise<Message[]> {
-    const slicedContents = bulkContent.match(/(.|[\r\n]){1,2000}/g) ?? []
+  private async sendBulkMessage (message: Message, aiResponse: AIResponse): Promise<Message[]> {
+    const slicedContents = aiResponse.reply.match(/(.|[\r\n]){1,2000}/g) ?? []
     const sentMessages: Message[] = []
 
     for (const [index, content] of slicedContents.entries()) {
@@ -76,6 +71,19 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
     return sentMessages
   }
 
+  private async setThreadTags (message: Message, aiResponse: AIResponse, tags: GuildForumTag[]): Promise<void> {
+    const channel = message.channel as PublicThreadChannel<true>
+    const filteredTags = tags.filter((tag) => aiResponse.tags.includes(tag.name))
+    const tagIds = filteredTags.map((tag) => tag.id)
+
+    await channel.setAppliedTags(tagIds)
+  }
+
+  private async setThreadTitle (message: Message, aiResponse: AIResponse): Promise<void> {
+    const channel = message.channel as PublicThreadChannel<true>
+    await channel.setName(aiResponse.title)
+  }
+
   private async processUnPermittedMessage (message: Message): Promise<void> {
     if (!message.content.startsWith('#') || message.content.startsWith('#asker'))
       await message.delete()
@@ -87,6 +95,11 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
 
     if (message.content.startsWith('#asker list'))
       await this.listAsker(message)
+  }
+
+  private async getTags (message: Message): Promise<GuildForumTag[]> {
+    const channel = message.channel as PublicThreadChannel<true>
+    return channel.parent?.availableTags ?? []
   }
 
   private async addAsker (message: Message): Promise<void> {
