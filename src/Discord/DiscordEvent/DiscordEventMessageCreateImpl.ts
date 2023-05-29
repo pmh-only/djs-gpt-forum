@@ -1,5 +1,6 @@
 import { AIAskerService } from '../../AI/AIAskerService'
-import type AIResponse from '../../AI/datatypes/AIResponse'
+import { AIMetadataService } from '../../AI/AIMetadataService'
+import type AIMetadata from '../../AI/datatypes/AIMetadata'
 import { DatabaseService } from '../../Database/DatabaseService'
 import { MessageAuthorType } from '../../Database/models/Messages'
 import { DiscordConsts } from '../DiscordConsts'
@@ -10,6 +11,7 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
   public readonly name = 'messageCreate'
   private readonly dbService = new DatabaseService()
   private readonly aiService = new AIAskerService()
+  private readonly aiMetadataService = new AIMetadataService()
 
   public async listener (_, message: Message): Promise<void> {
     if (!this.isVaildMessage(message))
@@ -33,17 +35,20 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
     const botMessage = await message.channel.send('Processing...')
     const threadTags = await this.getTags(message)
     const threadMessages = await this.dbService.loadThreadMessages(message)
-    const aiResult = await this.aiService.askAndParseMessages(threadMessages, threadTags)
+    const aiResult = await this.aiService.askAndParseMessages(threadMessages)
+    const aiMetadataResult = await this.aiMetadataService.askAndParseMetadata(threadMessages, threadTags)
 
     if (aiResult === undefined) {
       await botMessage.edit('ERROR')
       return
     }
 
-    await this.setThreadTags(message, aiResult, threadTags)
-    await this.setThreadTitle(message, aiResult)
-    const sentMessages = await this.sendBulkMessage(botMessage, aiResult)
+    if (aiMetadataResult !== undefined) {
+      await this.setThreadTags(message, aiMetadataResult, threadTags)
+      await this.setThreadTitle(message, aiMetadataResult)
+    }
 
+    const sentMessages = await this.sendBulkMessage(botMessage, aiResult)
     await this.dbService.saveNewMessages(sentMessages, MessageAuthorType.ASSISTANT)
   }
 
@@ -56,8 +61,8 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
       message.channel.parent.id === DiscordConsts.DISCORD_FORUM_ID
   }
 
-  private async sendBulkMessage (message: Message, aiResponse: AIResponse): Promise<Message[]> {
-    const slicedContents = aiResponse.reply.match(/(.|[\r\n]){1,2000}/g) ?? []
+  private async sendBulkMessage (message: Message, aiResponse: string): Promise<Message[]> {
+    const slicedContents = aiResponse.match(/(.|[\r\n]){1,2000}/g) ?? []
     const sentMessages: Message[] = []
 
     for (const [index, content] of slicedContents.entries()) {
@@ -71,7 +76,7 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
     return sentMessages
   }
 
-  private async setThreadTags (message: Message, aiResponse: AIResponse, tags: GuildForumTag[]): Promise<void> {
+  private async setThreadTags (message: Message, aiResponse: AIMetadata, tags: GuildForumTag[]): Promise<void> {
     const channel = message.channel as PublicThreadChannel<true>
     const filteredTags = tags.filter((tag) => aiResponse.tags.includes(tag.name))
     const tagIds = filteredTags.map((tag) => tag.id)
@@ -79,7 +84,7 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
     await channel.setAppliedTags(tagIds)
   }
 
-  private async setThreadTitle (message: Message, aiResponse: AIResponse): Promise<void> {
+  private async setThreadTitle (message: Message, aiResponse: AIMetadata): Promise<void> {
     const channel = message.channel as PublicThreadChannel<true>
     await channel.setName(aiResponse.title)
   }

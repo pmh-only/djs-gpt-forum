@@ -1,23 +1,14 @@
-import { type GuildForumTag } from 'discord.js'
 import { type Messages } from '../Database/models/Messages'
 import { LogLevel } from '../Logger/LogLevel'
 import { Logger } from '../Logger/Logger'
 import { AIAsker } from './AIAsker'
-import type AIResponse from './datatypes/AIResponse'
 
 export class AIAskerService {
   private readonly aiAsker = AIAsker.getInstance()
   private readonly logger = Logger.getInstance(AIAskerService.name)
 
-  public async askAndParseMessages (promptMessages: Messages[], tags: GuildForumTag[]): Promise<AIResponse | undefined> {
-    promptMessages[promptMessages.length - 1].message =
-      `user says "${promptMessages[promptMessages.length - 1].message}"` +
-      ' reply this conversation with line breaks in JSON "reply" field,' +
-      ' create korean title of this conversation in JSON "title" field' +
-      ` and choose hashtags from ${tags.reduce((prev, curr) => `${prev},"${curr.name}"`, '')} in JSON "tags" JSON array.`
-
-    const rawResponse = await this.askMessages(promptMessages)
-    return this.parseAIResponse(rawResponse)
+  public async askAndParseMessages (promptMessages: Messages[]): Promise<string | undefined> {
+    return await this.askMessages(promptMessages)
   }
 
   private async askMessages (promptMessages: Messages[]): Promise<string | undefined> {
@@ -33,32 +24,5 @@ export class AIAskerService {
         content: v.message,
         role: v.authorType
       })))
-  }
-
-  private parseAIResponse (rawResponse: string | undefined): AIResponse | undefined {
-    if (rawResponse === undefined)
-      return undefined
-
-    this.logger.log({
-      level: LogLevel.INFO,
-      message: 'parsing ai response.',
-      tag: ['parse', 'aiResponse'],
-      extra: { rawResponse }
-    })
-
-    try {
-      const parsedResponse = JSON.parse(rawResponse) as AIResponse
-      const isCorrectlyParsed =
-        typeof parsedResponse.reply === 'string' &&
-        typeof parsedResponse.title === 'string' &&
-        Array.isArray(parsedResponse.tags)
-
-      if (isCorrectlyParsed)
-        return parsedResponse
-
-      return undefined
-    } catch {
-      return undefined
-    }
   }
 }
