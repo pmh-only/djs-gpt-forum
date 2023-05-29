@@ -36,20 +36,20 @@ export class DiscordEventMessageCreateImpl implements DiscordEvent<'messageCreat
     const threadTags = await this.getTags(message)
     const threadMessages = await this.dbService.loadThreadMessages(message)
     const aiResult = await this.aiService.askAndParseMessages(threadMessages)
-    const aiMetadataResult = await this.aiMetadataService.askAndParseMetadata(threadMessages, threadTags)
 
     if (aiResult === undefined) {
       await botMessage.edit('ERROR')
       return
     }
 
+    const sentMessages = await this.sendBulkMessage(botMessage, aiResult)
+    await this.dbService.saveNewMessages(sentMessages, MessageAuthorType.ASSISTANT)
+
+    const aiMetadataResult = await this.aiMetadataService.askAndParseMetadata(threadMessages, threadTags)
     if (aiMetadataResult !== undefined) {
       await this.setThreadTags(message, aiMetadataResult, threadTags)
       await this.setThreadTitle(message, aiMetadataResult)
     }
-
-    const sentMessages = await this.sendBulkMessage(botMessage, aiResult)
-    await this.dbService.saveNewMessages(sentMessages, MessageAuthorType.ASSISTANT)
   }
 
   private isVaildMessage (message: Message): boolean {
